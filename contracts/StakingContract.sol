@@ -24,6 +24,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
     }
 
     uint8 public constant POOL_LEN = 4;
+    uint32 public constant PERCENT_UNIT = 1000;
     uint256 public constant MIN_STAKE_AMOUNT = 0;
 
     uint32[4] public durations;
@@ -58,8 +59,8 @@ contract StakingContract is Ownable, ReentrancyGuard {
     constructor(address _stakingToken, address _rewardToken) {
         StakingToken = IERC20(_stakingToken);
         RewardToken = IERC20(_rewardToken);
-        durations = [30 days, 90 days, 180 days, 360 days];
-        rates = [15, 30, 100, 300];
+        durations = [30 days, 90 days, 180 days, 360 days]; // [1 month, 3 months, 6 months, 12 months]
+        rates = [15, 30, 100, 300]; // [1.5%, 3%, 10%, 30%]
     }
 
     function addRewardToken(uint256 _amount) public onlyOwner {
@@ -79,13 +80,13 @@ contract StakingContract is Ownable, ReentrancyGuard {
         emit RewardTokenRemoved(msg.sender, _amount);
     }
 
-    function updateDurations(uint32[4] memory _durations) public onlyOwner {
+    function setDurations(uint32[4] memory _durations) public onlyOwner {
         durations = _durations;
 
         emit UpdatedDurations(msg.sender);
     }
 
-    function updateRates(uint32[4] memory _rates) public onlyOwner {
+    function setRates(uint32[4] memory _rates) public onlyOwner {
         rates = _rates;
 
         emit UpdatedRates(msg.sender);
@@ -179,7 +180,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
         emit Unstaked(msg.sender, _id);
     }
 
-    function claimReward(uint256 _id) public nonReentrant(){
+    function claimReward(uint256 _id) public nonReentrant {
         info storage userInfo = userStaked[msg.sender][_id];
         require (block.timestamp - userInfo.stakedTime >= userInfo.duration, "Locked still.");
 
@@ -188,10 +189,10 @@ contract StakingContract is Ownable, ReentrancyGuard {
         emit ClaimReward(msg.sender, block.timestamp, _id);
     }
 
-    function claimRewardAll() public nonReentrant {
-        uint amount = 0;
-        uint length = stakedIDs[msg.sender].length;
-        for(uint i=0; i<length; i++){
+    function claimAllReward() public nonReentrant {
+        uint256 amount = 0;
+        uint256 length = stakedIDs[msg.sender].length;
+        for(uint32 i=0; i < length; i++){
             info storage userInfo = userStaked[msg.sender][stakedIDs[msg.sender][i]];
             if (userInfo.amount == 0)
                 continue;
@@ -199,7 +200,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
             if (block.timestamp - userInfo.stakedTime < userInfo.duration)
                 continue;
 
-            uint amountIndex = getReward(msg.sender, stakedIDs[msg.sender][i]);
+            uint256 amountIndex = getReward(msg.sender, stakedIDs[msg.sender][i]);
             if (amountIndex == 0)
                 continue;
 
@@ -215,32 +216,31 @@ contract StakingContract is Ownable, ReentrancyGuard {
         emit ClaimRewardAll(msg.sender, block.timestamp, amount);
     }
 
-    // Getter
+    // Views
     function getReward(address _user, uint256 _id) public view returns(uint256) {
         info storage userInfo = userStaked[_user][_id];
-        uint256 timeDiff = block.timestamp - userInfo.lastClaim;
 
-        uint256 reward = userInfo.amount * timeDiff * userInfo.rates / (userInfo.duration * 100);
+        uint256 reward = userInfo.amount * userInfo.rates / PERCENT_UNIT;
 
         return reward;
     }
 
-    function getAllReward(address _user) public view returns(uint) {
-        uint amount = 0;
-        uint length = stakedIDs[_user].length;
-        for(uint i=0; i<length; i++){
+    function getAllReward(address _user) public view returns(uint256) {
+        uint256 amount = 0;
+        uint256 length = stakedIDs[_user].length;
+        for(uint32 i = 0; i < length; i++){
             info storage userInfo = userStaked[_user][stakedIDs[_user][i]];
             if (userInfo.amount == 0)
                 continue;
 
-            uint amountIndex = getReward(_user, stakedIDs[_user][i]);
+            uint256 amountIndex = getReward(_user, stakedIDs[_user][i]);
             amount += amountIndex;
         }
 
         return amount;
     }
 
-    function claimableReward(address _user, uint _id) public view returns(uint) {
+    function claimableReward(address _user, uint256 _id) public view returns(uint256) {
         info storage userInfo = userStaked[_user][_id];
 
         if (block.timestamp - userInfo.stakedTime < userInfo.duration)
@@ -249,10 +249,10 @@ contract StakingContract is Ownable, ReentrancyGuard {
         return getReward(_user, _id);
     }
 
-    function claimableAllReward(address _user) public view returns(uint) {
-        uint amount = 0;
-        uint length = stakedIDs[_user].length;
-        for(uint i=0; i<length; i++){
+    function claimableAllReward(address _user) public view returns(uint256) {
+        uint256 amount = 0;
+        uint256 length = stakedIDs[_user].length;
+        for(uint256 i=0; i<length; i++){
             info storage userInfo = userStaked[_user][stakedIDs[_user][i]];
             if (userInfo.amount == 0)
                 continue;
@@ -260,7 +260,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
             if (block.timestamp - userInfo.stakedTime < userInfo.duration)
                 continue;
 
-            uint amountIndex = getReward(_user, stakedIDs[_user][i]);
+            uint256 amountIndex = getReward(_user, stakedIDs[_user][i]);
             amount += amountIndex;
         }
 
