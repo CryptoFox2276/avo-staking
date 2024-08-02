@@ -1,8 +1,6 @@
-const { ethers, waffle } = require("hardhat");
-
-const sleep = async (seconds) => {
-  return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
-};
+const { ethers } = require('hardhat');
+const { assert, expect } = require("chai");
+const { time } = require('@nomicfoundation/hardhat-network-helpers');
 
 const deploy = async (contractName, ...args) => {
   const factory = await ethers.getContractFactory(contractName);
@@ -31,23 +29,7 @@ const verify = async (contract, args, retry = 3) => {
   console.log("********************************************************");
 };
 
-async function main() {
-  const [deployer] = await ethers.getSigners();
+describe('Staking contract', () => {
 
-  // const TheXdaoNFTContract = await deploy("TheXdaoNFT");
-  const initialMint = ethers.utils.parseEther("10000000000").toString();
 
-  const hertzToken = await deploy("Hertz", initialMint);
-  const tgrToken = await deploy("TgrToken", initialMint);  
-
-  // const TheXdaoMarketContract = await deploy("TheXdaoMarket");
-
-  const TheXdaoAuctionContract = await deploy("TheXdaoAuction", hertzToken.address, deployer.address);  
-}
-
-main()
-  .then(() => process.exit())
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
+});
