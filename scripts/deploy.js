@@ -1,27 +1,4 @@
-const { ethers, waffle } = require("hardhat");
-
-const JOBTYPES = [
-  'Art',
-  'Audio Creation',
-  'Backend Development',
-  'Business Consulting and Project Management',
-  'Fiction Writing',
-  'Frontend Development',
-  'Game Development',
-  'Logo Design',
-  'Misc Design',
-  'Mobile Development',
-  'Modeling',
-  'Nonfiction Writing',
-  'Proofreading',
-  'Product Marketing',
-  'Social Media Marketing',
-  'Search Engine Optimization',
-  'Translation',
-  'Video and Animation',
-  'Web Design',
-  'Web Development'
-]
+const { ethers } = require("hardhat");
 
 const sleep = async (seconds) => {
   return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
@@ -56,8 +33,9 @@ const verify = async (contract, args, retry = 3) => {
 };
 
 async function main() {
-  
-
+  const rewardToken = await deploy('RewardToken', 'Reward Token', 'rewardToken')
+  const projectToken = await deploy('ProjectToken', 'Project Token', 'projectToken')
+  const stakingContract = await deploy('StakingContract', projectToken.address, rewardToken.address)
 }
 
 main()
