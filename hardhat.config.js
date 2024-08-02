@@ -15,7 +15,7 @@ module.exports = {
          },
          allowUnlimitedContractSize: true,
     },
-    defaultNetwork: 'ftmTestnet',
+    defaultNetwork: 'hardhat',
     namedAccounts: {
         deployer: {
           default: 0,
@@ -25,39 +25,30 @@ module.exports = {
         localhost: {
           timeout: 120000,
           forking: {
-            url: "https://rpc.ftm.tools/"
+            url: "https://arbitrum.llamarpc.com/"
           }
         },
         hardhat: {
           allowUnlimitedContractSize: true,
           forking: {
-            url: "https://rpc.ftm.tools/"
+            url: "https://arbitrum.llamarpc.com/"
           }
         },
-        ftmTestnet: {
-          url: "https://rpc.testnet.fantom.network",
+        arbitrumSepolia: {
+          url: "https://sepolia-rollup.arbitrum.io/rpc",
           accounts: [process.env.PV_KEY],
-          gas: 5000000,
-          gasPrice:  50000000000,
           allowUnlimitedContractSize: true
         },
-        fantom: {
-          url: "https://rpc.ftm.tools/",
+        arbitrumOne: {
+          url: "https://arbitrum.llamarpc.com/",
           accounts: [process.env.PV_KEY],
         },
-        goerli: {
-            url: `https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
-            accounts: [`${process.env.PV_KEY}`],
-        },
-        avalanche: {
-          url: `https://api.avax.network/ext/bc/C/rpc`,
-          chainId: 43114,
-          gasPrice: 225000000000,
-          accounts: [process.env.PV_KEY]
-        }
     },
     etherscan: {
-        apiKey: `${process.env.API_KEY}`,
+      apiKey: {
+        arbitrumSepolia: `${process.env.API_KEY}`,
+        arbitrumOne: `${process.env.API_KEY}`
+      },
     },
     contractSizer: {
         alphaSort: true,
