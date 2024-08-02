@@ -10,34 +10,36 @@ contract StakingContract is Ownable, ReentrancyGuard {
     IERC20 StakingToken;
     IERC20 RewardToken;
     
+    // Total reward token supply and total tokens staked
     uint256 public rewardTokenSupply;
     uint256 public totalStakedToken;
 
+    // Struct to hold information about user stakes
     struct info {
-        uint256 amount;
-        uint256 lastClaim;
-        uint256 stakedTime;
-        uint32 duration;
-        uint32 rates;
-        uint256 position;
-        uint256 earned;    
+        uint256 amount;         // Amount staked
+        uint256 lastClaim;      // Last claim time for rewards
+        uint256 stakedTime;     // Time when the user staked
+        uint32 duration;        // Duration for which token are staked
+        uint32 rate;            // Rate of reward
+        uint position;          // Position in the staked IDs array
+        uint256 earned;         // Total rewards earned
     }
 
-    uint8 public constant MAX_POOL_LEN = 4; // Pool length
-    uint32 public constant PERCENT_UNIT = 1000; // 100 percent
-    uint32 public constant MAX_LIMIT_RATE = 600; // 60%
-    uint256 public constant MIN_STAKE_AMOUNT = 0;
+    uint8 public constant MAX_POOL_LEN = 4;         // Maximum number of staking options available
+    uint32 public constant PERCENT_UNIT = 1000;     // 1000 represents 100%
+    uint32 public constant MAX_LIMIT_RATE = 600;    // Maximum rate cap is 60%
+    uint256 public constant MIN_STAKE_AMOUNT = 0;   // Minimum stake that can be accepted
 
-    uint32[4] public durations;
-    uint32[4] public rates;
+    uint32[4] public durations;     // Array for staking durations
+    uint32[4] public rates;         // Array for staking rates
 
-    mapping(address => mapping(uint256 => info)) public userStaked; // USER > ID > INFO
     mapping(address => uint256) public userID;
-    mapping(address => uint256) public userTotalEarnedReward;
     mapping(address => uint256) public userTotalStaked;
-    mapping(address => uint256[]) public stakedIDs;
+    mapping(address => uint256) public userTotalEarnedReward;
+    mapping(address => mapping(uint256 => info)) public userStaked; // USER > ID > INFO
+    mapping(address => uint256[]) public stakedIDs;                 // Array to track staking IDs for each user
 
-    bool public paused;
+    bool public paused;     // Boolean flag to pause the contract
 
     event Staked(
         address indexed _user,
@@ -65,9 +67,8 @@ contract StakingContract is Ownable, ReentrancyGuard {
     }
 
     function addRewardToken(uint256 _amount) public onlyOwner {
-        // transfer from (need allowance)
-        RewardToken.transferFrom(msg.sender, address(this), _amount);
-        rewardTokenSupply += _amount;
+        RewardToken.transferFrom(msg.sender, address(this), _amount); // Transfer reward token
+        rewardTokenSupply += _amount;       // Increase total reward token supply
 
         emit RewardTokenAdded(msg.sender, _amount);
     }
@@ -75,20 +76,20 @@ contract StakingContract is Ownable, ReentrancyGuard {
     function removeRewardToken(uint256 _amount) public onlyOwner {
         require(_amount <= rewardTokenSupply, "Invalid amount");
         
-        RewardToken.transfer(msg.sender, _amount);
-        rewardTokenSupply -= _amount;
+        RewardToken.transfer(msg.sender, _amount);  // Transfer back the tokens
+        rewardTokenSupply -= _amount;               // Decrease the supply
 
         emit RewardTokenRemoved(msg.sender, _amount);
     }
 
     function setDurations(uint32[4] memory _durations) public onlyOwner {
-        durations = _durations;
+        durations = _durations; // Set new durations
 
         emit UpdatedDurations(msg.sender);
     }
 
     function setRates(uint32[4] memory _rates) public onlyOwner {
-        rates = _rates;
+        rates = _rates; // Set new rates
 
         emit UpdatedRates(msg.sender);
     }
@@ -96,7 +97,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
     function setRewardToken(address _rewardToken) public onlyOwner {
         require(_rewardToken != address(0), "Invalid address");
 
-        RewardToken = IERC20(_rewardToken);
+        RewardToken = IERC20(_rewardToken); // Set new reward token
     }
 
     function setStakingToken(address _stakingToken) public onlyOwner {
@@ -105,11 +106,13 @@ contract StakingContract is Ownable, ReentrancyGuard {
         StakingToken = IERC20(_stakingToken);
     }
 
+    // Function for users to stake token with a specified duration
     function stake(uint256 _amount, uint32 _durationCode) public nonReentrant {
         require(!paused, "Paused");
-        require( _amount > 0 && _amount > MIN_STAKE_AMOUNT, "Invalid amount");
+        require( _amount > 0 && _amount > MIN_STAKE_AMOUNT, "Invalid stake amount");
         require(_durationCode < MAX_POOL_LEN, "Invalid duration");
 
+        // Increment the user ID and create a new stake record
         userID[msg.sender]++;
         userStaked[msg.sender][userID[msg.sender]] = info(
             _amount,
@@ -120,7 +123,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
             stakedIDs[msg.sender].length,
             0
         );
-        stakedIDs[msg.sender].push(userID[msg.sender]);
+        stakedIDs[msg.sender].push(userID[msg.sender]); // Store the new stake ID
 
         require(StakingToken.transferFrom(msg.sender, address(this), _amount), "Insufficient balance");
 
@@ -137,6 +140,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
         );
     }
 
+    // Function for users to unstake their token
     function unStake(uint256 _id) public nonReentrant {
         claim(_id);
 
@@ -145,9 +149,8 @@ contract StakingContract is Ownable, ReentrancyGuard {
         require(block.timestamp - userInfo.stakedTime >= userInfo.duration, "Not unlocked yet");
         require(StakingToken.balanceOf(address(this)) >= userInfo.amount, "Insufficient token balance");
 
-        StakingToken.transfer(msg.sender, userInfo.amount);
-
-        popSlot(_id);
+        StakingToken.transfer(msg.sender, userInfo.amount); // Transfer the staked tokens back to the user
+        popSlot(_id);   // Remove the stake from the IDs array
 
         delete userStaked[msg.sender][_id];
 
@@ -157,54 +160,33 @@ contract StakingContract is Ownable, ReentrancyGuard {
         emit Unstaked(msg.sender, _id);
     }
 
-    function unStake(uint256 _amount, uint256 _id) public nonReentrant {
-        claim(_id);
-
-        info storage userInfo = userStaked[msg.sender][_id];
-        require(userInfo.amount != 0 && _amount <= userInfo.amount, "Invalid ID");
-        require(block.timestamp - userInfo.stakedTime >= userInfo.duration, "Not unlocked yet");
-
-        if (_amount == userInfo.amount) {
-            popSlot(_id);
-            delete userStaked[msg.sender][_id];
-        } else {
-            userInfo.amount -= _amount;
-        }
-
-        require(StakingToken.balanceOf(address(this)) >= _amount, "Insufficient token balance");
-
-        StakingToken.transfer(msg.sender, _amount);
-
-        totalStakedToken -= _amount;
-        userTotalStaked[msg.sender] -= _amount;
-
-        emit Unstaked(msg.sender, _id);
-    }
-
-    function increateRate(address _user, uint256 _id, uint32 _increaseRate) public nonReentrant onlyOwner {
+    // Function for the owner to increase the reward rate of a specific user's stake
+    function increaseRate(address _user, uint256 _id, uint32 _increaseRate) public nonReentrant onlyOwner {
         info storage userInfo = userStaked[_user][_id];
-        if (userInfo.rates + _increaseRate <= MAX_LIMIT_RATE) {
-            userInfo.rates += _increaseRate;
+        if (userInfo.rate + _increaseRate <= MAX_LIMIT_RATE) {
+            userInfo.rate += _increaseRate;
         }
-        
     }
 
-    function increateRateAll(address _user, uint32 _increaseRate) public nonReentrant onlyOwner {
+    // Function for the owner to increase the reward rates for all stakes of a user
+    function increaseRateAll(address _user, uint32 _increaseRate) public nonReentrant onlyOwner {
         uint256 length = stakedIDs[_user].length;
         for(uint32 i=0; i<length; i++){
-            increateRate(_user, stakedIDs[_user][i], _increaseRate);
+            increaseRate(_user, stakedIDs[_user][i], _increaseRate);
         }
     }
 
+    // Function for users to claim rewards for a specific stake after the duration has passed
     function claimReward(uint256 _id) public nonReentrant {
         info storage userInfo = userStaked[msg.sender][_id];
         require (block.timestamp - userInfo.stakedTime >= userInfo.duration, "Locked still");
 
-        claim(_id);
+        claim(_id); // Claim rewards
 
         emit ClaimReward(msg.sender, block.timestamp, _id);
     }
 
+    // Function for users to claim rewards from all stakes
     function claimAllReward() public nonReentrant {
         uint256 amount = 0;
         uint256 length = stakedIDs[msg.sender].length;
@@ -216,7 +198,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
             if (block.timestamp - userInfo.stakedTime < userInfo.duration)
                 continue;
 
-            uint256 amountIndex = getReward(msg.sender, stakedIDs[msg.sender][i]);
+            uint256 amountIndex = getReward(msg.sender, stakedIDs[msg.sender][i]);  // Calculate rewards
             if (amountIndex == 0)
                 continue;
 
@@ -232,11 +214,11 @@ contract StakingContract is Ownable, ReentrancyGuard {
         emit ClaimRewardAll(msg.sender, block.timestamp, amount);
     }
 
-    // Views
+    // View functions
     function getReward(address _user, uint256 _id) public view returns(uint256) {
         info storage userInfo = userStaked[_user][_id];
 
-        uint256 reward = userInfo.amount * userInfo.rates / PERCENT_UNIT;
+        uint256 reward = userInfo.amount * userInfo.rate / PERCENT_UNIT;
 
         return reward;
     }
@@ -283,25 +265,26 @@ contract StakingContract is Ownable, ReentrancyGuard {
         return amount;
     }
 
-    // private functions
+    // Function to handle the actual reward claiming process
     function claim(uint256 _id) private {
         uint256 amount = 0;
-        require(userStaked[msg.sender][_id].amount != 0, "Invalid ID");
+        require(userStaked[msg.sender][_id].amount != 0, "Invalid ID"); // Ensure valid ID
 
         amount = getReward(msg.sender, _id);
 
         require(RewardToken.balanceOf(address(this)) >= amount, "Insufficient token balance");
 
-        RewardToken.transfer(msg.sender, amount);
+        RewardToken.transfer(msg.sender, amount);   // Transfer rewards to user
 
         info storage userInfo = userStaked[msg.sender][_id];
         userInfo.lastClaim = block.timestamp;
         userInfo.earned += amount;
 
-        userTotalEarnedReward[msg.sender] += amount;
-        rewardTokenSupply -= amount;
+        userTotalEarnedReward[msg.sender] += amount;    // Update user's total rewards earned
+        rewardTokenSupply -= amount;    // Reduce reward token supply
     }
 
+    // Function to remove an ID from the user's staked IDs
     function popSlot(uint256 _id) private {
         uint256 length = stakedIDs[msg.sender].length;
         bool replace = false;
