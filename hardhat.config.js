@@ -24,15 +24,9 @@ module.exports = {
     networks: {
         localhost: {
           timeout: 120000,
-          forking: {
-            url: "https://arb1.arbitrum.io/rpc"
-          }
         },
         hardhat: {
           allowUnlimitedContractSize: true,
-          forking: {
-            url: "https://arb1.arbitrum.io/rpc"
-          }
         },
         arbitrumSepolia: {
           url: "https://sepolia-rollup.arbitrum.io/rpc",
