@@ -23,8 +23,9 @@ contract StakingContract is Ownable, ReentrancyGuard {
         uint256 earned;    
     }
 
-    uint8 public constant POOL_LEN = 4;
-    uint32 public constant PERCENT_UNIT = 1000;
+    uint8 public constant MAX_POOL_LEN = 4; // Pool length
+    uint32 public constant PERCENT_UNIT = 1000; // 100 percent
+    uint32 public constant MAX_LIMIT_RATE = 600; // 60%
     uint256 public constant MIN_STAKE_AMOUNT = 0;
 
     uint32[4] public durations;
@@ -107,7 +108,7 @@ contract StakingContract is Ownable, ReentrancyGuard {
     function stake(uint256 _amount, uint32 _durationCode) public nonReentrant {
         require(!paused, "Paused");
         require( _amount > 0 && _amount > MIN_STAKE_AMOUNT, "Invalid amount");
-        require(_durationCode < POOL_LEN, "Invalid duration");
+        require(_durationCode < MAX_POOL_LEN, "Invalid duration");
 
         userID[msg.sender]++;
         userStaked[msg.sender][userID[msg.sender]] = info(
@@ -180,9 +181,24 @@ contract StakingContract is Ownable, ReentrancyGuard {
         emit Unstaked(msg.sender, _id);
     }
 
+    function increateRate(address _user, uint256 _id, uint32 _increaseRate) public nonReentrant onlyOwner {
+        info storage userInfo = userStaked[_user][_id];
+        if (userInfo.rates + _increaseRate <= MAX_LIMIT_RATE) {
+            userInfo.rates += _increaseRate;
+        }
+        
+    }
+
+    function increateRateAll(address _user, uint32 _increaseRate) public nonReentrant onlyOwner {
+        uint256 length = stakedIDs[_user].length;
+        for(uint32 i=0; i<length; i++){
+            increateRate(_user, stakedIDs[_user][i], _increaseRate);
+        }
+    }
+
     function claimReward(uint256 _id) public nonReentrant {
         info storage userInfo = userStaked[msg.sender][_id];
-        require (block.timestamp - userInfo.stakedTime >= userInfo.duration, "Locked still.");
+        require (block.timestamp - userInfo.stakedTime >= userInfo.duration, "Locked still");
 
         claim(_id);
 
