@@ -25,13 +25,13 @@ module.exports = {
         localhost: {
           timeout: 120000,
           forking: {
-            url: "https://arbitrum.llamarpc.com/"
+            url: "https://arb1.arbitrum.io/rpc"
           }
         },
         hardhat: {
           allowUnlimitedContractSize: true,
           forking: {
-            url: "https://arbitrum.llamarpc.com/"
+            url: "https://arb1.arbitrum.io/rpc"
           }
         },
         arbitrumSepolia: {
@@ -40,7 +40,7 @@ module.exports = {
           allowUnlimitedContractSize: true
         },
         arbitrumOne: {
-          url: "https://arbitrum.llamarpc.com/",
+          url: "https://arb1.arbitrum.io/rpc",
           accounts: [process.env.PV_KEY],
         },
     },
