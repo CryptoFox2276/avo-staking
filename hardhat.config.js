@@ -43,6 +43,24 @@ module.exports = {
         arbitrumSepolia: `${process.env.API_KEY}`,
         arbitrumOne: `${process.env.API_KEY}`
       },
+        customChains: [
+            {
+                network: "arbitrumSepolia",
+                chainId: 421614,
+                urls: {
+                    apiURL: "https://api-sepolia.arbiscan.io/api",
+                    browserURL: "https://sepolia.arbiscan.io"
+                }
+            },
+            {
+                network: 'arbitrumOne',
+                chainId: 42161,
+                urls: {
+                    apiURL: "https://api.arbiscan.com/api",
+                    browserURL: "https://sepolia.arbiscan.io/"
+                }
+            },
+        ]
     },
     contractSizer: {
         alphaSort: true,
