@@ -19,7 +19,6 @@ const verify = async (contract, args, retry = 3) => {
   for (let i = 0; i < retry; i++) {
     try {
       await hre.run("verify:verify", {
-        contract: 'contracts/TgrToken.sol:TgrToken',
         address: contract.address,
         constructorArguments: args,
       });
