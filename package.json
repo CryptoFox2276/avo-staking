@@ -1,15 +1,15 @@
 {
-  "name": "com.xdao.app",
+  "name": "avo-staking",
   "version": "1.0.0",
-  "description": "Contracts for Freelance Marketplace Agency",
+  "description": "Contracts for staking AVO token",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "xdao"
+    "staking, AVO token"
   ],
-  "author": "Ash",
+  "author": "ligun",
   "license": "ISC",
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^1.0.4",
